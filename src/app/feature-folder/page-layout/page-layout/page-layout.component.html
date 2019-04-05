@@ -13,6 +13,7 @@
     <mat-nav-list>
       <a routerLink="debug" mat-list-item>Debug</a>
     </mat-nav-list>
+    <pre>{{ menuService.mainMenuListBS$ | async | json }}</pre>
   </mat-sidenav>
   <mat-sidenav-content>
     <mat-toolbar color="primary">

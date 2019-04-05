@@ -2,6 +2,7 @@ import {Component} from '@angular/core';
 import {ApiService} from '../../../service-folder/api/api.service';
 import {forkJoin} from 'rxjs';
 import {mainMenu} from './migration-folder/main-menu';
+import {MenuService} from '../../../service-folder/menu/menu.service';
 
 declare var require: any;
 const dicts = require('./migration-folder/DictionaryEditor.json');
@@ -21,6 +22,7 @@ export class DebugComponent {
 
   constructor(
     private _apiService: ApiService,
+    private _menuService: MenuService,
   ) {
   }
 
@@ -28,7 +30,9 @@ export class DebugComponent {
     for (const className of this._classNameList) {
       this._apiService.findItems$(className).subscribe(listResponse => {
         forkJoin(listResponse.list.map(item => this._apiService.deleteItem$(className, item.uuid))).subscribe(() => {
-          console.log(`Deleted ${listResponse.total} ${className}`);
+          this._menuService.loadMainMenuList$().subscribe(() => {
+            console.log(`Deleted ${listResponse.total} ${className}`);
+          });
         });
       });
     }
@@ -44,7 +48,9 @@ export class DebugComponent {
     });
 
     forkJoin(mainMenu.list.map(item => this._apiService.createItem$('MainMenu', item))).subscribe(() => {
-      console.log('Created MainMenu');
+      this._menuService.loadMainMenuList$().subscribe(() => {
+        console.log('Created MainMenu');
+      });
     });
   }
 

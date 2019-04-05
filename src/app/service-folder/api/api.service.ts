@@ -44,4 +44,14 @@ export class ApiService {
       new ListRequestConfig(listRequestConfig),
     );
   }
+
+  public getItemByCode$(
+    className: string,
+    code: string,
+  ): Observable<any> {
+    return this._httpClient.post<any>(
+      `${environment.apiUrl}/${className}/GetItemByCode`,
+      {code},
+    );
+  }
 }

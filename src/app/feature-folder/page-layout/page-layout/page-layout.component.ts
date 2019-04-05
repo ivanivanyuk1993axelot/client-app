@@ -1,4 +1,5 @@
 import {Component} from '@angular/core';
+import {MenuService} from '../../../service-folder/menu/menu.service';
 
 @Component({
   selector: 'app-page-layout',
@@ -6,4 +7,10 @@ import {Component} from '@angular/core';
   styleUrls: ['./page-layout.component.css']
 })
 export class PageLayoutComponent {
+  constructor(
+    public menuService: MenuService,
+  ) {
+    menuService.loadMainMenuList$().subscribe();
+  }
+
 }
