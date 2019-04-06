@@ -89,9 +89,7 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
     routeListFlat: Array<MainMenuExtended>,
   ) {
-    if (this._hasRouteUrl(route)) {
-      routeListFlat.push(route);
-    }
+    routeListFlat.push(route);
 
     if (route.items) {
       for (const childRoute of route.items) {
@@ -211,7 +209,9 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     this._searchRegExpBS$.pipe(
       takeUntil(this._changeS$),
     ).subscribe(searchRegExp => {
-      route.matchesSearchRegExpBS$.next(searchRegExp.test(route.text));
+      route.matchesSearchRegExpBS$.next(
+        searchRegExp.test(route.text) && (this.searchStringC.value === '' || this._hasRouteUrl(route))
+      );
     });
 
     if (parentRoute) {
