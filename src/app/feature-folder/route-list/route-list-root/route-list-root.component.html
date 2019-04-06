@@ -4,12 +4,30 @@
   <span matPrefix>&nbsp;</span>
   <!-- todo вынести в localizationService -->
   <mat-label>Поиск</mat-label>
-  <!--  [matAutocomplete]="matAutocomplete"-->
   <input
     [formControl]="searchStringC"
+    [matAutocomplete]="matAutocomplete"
     matInput
     type="search"
   >
+  <mat-autocomplete
+    #matAutocomplete="matAutocomplete"
+    autoActiveFirstOption
+    panelWidth="auto"
+  >
+    <ng-container
+      *ngFor="let route of routeListExtendedFlatBS$ | async"
+    >
+      <mat-option
+        (onSelectionChange)="selectOption($event, route)"
+        *ngIf="route.matchesSearchRegExpBS$ | async"
+        [value]="route.text"
+      >
+        <mat-icon *ngIf="route.imageUrl">home</mat-icon>
+        {{route.text}}
+      </mat-option>
+    </ng-container>
+  </mat-autocomplete>
 </mat-form-field>
 
 <div class="route-list-container">

@@ -8,6 +8,7 @@ import {BroadcastComponentDestroyed} from '../../../mixin-folder/broadcast-compo
 import {applyMixins} from 'rxjs/internal-compatibility';
 import {FormControl} from '@angular/forms';
 import {escapeRegExp} from 'tslint/lib/utils';
+import {MatOptionSelectionChange} from '@angular/material';
 
 @Component({
   selector: 'app-route-list-root',
@@ -18,6 +19,7 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
   @Input() routeList: Array<MainMenu>;
 
   public routeListExtendedBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
+  public routeListExtendedFlatBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
   public searchStringC = new FormControl('');
 
   _isComponentDestroyedS$ = new Subject<void>();
@@ -46,6 +48,14 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
         new RegExp(escapeRegExp(searchString), 'i'),
       );
     });
+
+    this.routeListExtendedBS$.pipe(
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe(routeListExtended => {
+      this.routeListExtendedFlatBS$.next(
+        this._computeRouteListFlat(routeListExtended),
+      );
+    });
   }
 
   public ngOnChanges(): void {
@@ -61,7 +71,33 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     this._changeS$.complete();
   }
 
+  public selectOption(
+    event: MatOptionSelectionChange,
+    route: MainMenuExtended,
+  ): void {
+    if (event.source.selected) {
+      this._router.navigateByUrl(route.action).then(() => {
+        this.searchStringC.setValue('');
+      });
+    }
+  }
+
   _broadcastComponentDestroyed(): void {
+  }
+
+  private _appendRouteToFlatList(
+    route: MainMenuExtended,
+    routeListFlat: Array<MainMenuExtended>,
+  ) {
+    if (this._hasRouteUrl(route)) {
+      routeListFlat.push(route);
+    }
+
+    if (route.items) {
+      for (const childRoute of route.items) {
+        this._appendRouteToFlatList(childRoute, routeListFlat);
+      }
+    }
   }
 
   private _computeRouteListExtended(
@@ -74,6 +110,28 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     }
 
     return routListExtended;
+  }
+
+  private _computeRouteListFlat(
+    routeList: Array<MainMenuExtended>,
+  ): Array<MainMenuExtended> {
+    const routeListFlat = [];
+
+    for (const route of routeList) {
+      this._appendRouteToFlatList(route, routeListFlat);
+    }
+
+    routeListFlat.sort((left, right) => {
+      if (left.text < right.text) {
+        return -1;
+      }
+      if (left.text > right.text) {
+        return 1;
+      }
+      return 0;
+    });
+
+    return routeListFlat;
   }
 
   private _extendRoute(
@@ -193,6 +251,12 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
         );
       });
     }
+  }
+
+  private _hasRouteUrl(
+    route: MainMenuExtended,
+  ) {
+    return route.action !== '#';
   }
 }
 
