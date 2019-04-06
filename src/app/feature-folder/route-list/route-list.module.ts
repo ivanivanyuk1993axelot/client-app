@@ -5,6 +5,7 @@ import {RouteListRootComponent} from './route-list-root/route-list-root.componen
 import {MatIconModule, MatListModule} from '@angular/material';
 import {RouterModule} from '@angular/router';
 import { RouteComponent } from './route/route.component';
+import {ReactiveFormsModule} from '@angular/forms';
 
 @NgModule({
   declarations: [RouteListComponent, RouteListRootComponent, RouteComponent],
@@ -14,6 +15,7 @@ import { RouteComponent } from './route/route.component';
     MatIconModule,
     MatListModule,
     RouterModule,
+    ReactiveFormsModule,
   ]
 })
 export class RouteListModule {

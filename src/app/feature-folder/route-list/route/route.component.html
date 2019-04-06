@@ -1,6 +1,5 @@
-<!--      [ngClass]="{hidden: !(routeData.matchesSearchRegExpSubject$ | async)}"-->
 <a
-  [ngClass]="{ active: route.matchesUrlBS$ | async }"
+  [ngClass]="{ active: route.matchesUrlBS$ | async, hidden: !(route.matchesSearchRegExpBS$ | async) }"
   [routerLink]="route.action === '#' ? null : route.action"
   mat-list-item
 >

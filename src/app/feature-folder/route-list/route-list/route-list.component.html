@@ -6,9 +6,9 @@
     <app-route
       [route]="route"
     ></app-route>
-<!--    [ngClass]="{hidden: !(routeData.hasFilteredChildRouteListSubject$ | async)}"-->
     <div
       *ngIf="route.items"
+      [ngClass]="{hidden: !(route.hasChildrenThatMatchSearchRegExpBS$ | async)}"
       class="route-list"
     >
       <app-route-list

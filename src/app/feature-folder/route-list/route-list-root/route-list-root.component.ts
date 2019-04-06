@@ -6,6 +6,8 @@ import {NavigationEnd, Router} from '@angular/router';
 import {distinctUntilChanged, filter, startWith, takeUntil} from 'rxjs/operators';
 import {BroadcastComponentDestroyed} from '../../../mixin-folder/broadcast-component-destroyed';
 import {applyMixins} from 'rxjs/internal-compatibility';
+import {FormControl} from '@angular/forms';
+import {escapeRegExp} from 'tslint/lib/utils';
 
 @Component({
   selector: 'app-route-list-root',
@@ -16,21 +18,33 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
   @Input() routeList: Array<MainMenu>;
 
   public routeListExtendedBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
+  public searchStringC = new FormControl('');
 
   _isComponentDestroyedS$ = new Subject<void>();
 
-  private _currentUrlBS$: BehaviorSubject<string>;
   private _changeS$ = new Subject<void>();
+  private _currentUrlBS$: BehaviorSubject<string>;
+  private _searchRegExpBS$: BehaviorSubject<RegExp>;
 
   constructor(
     private _router: Router,
   ) {
     this._currentUrlBS$ = new BehaviorSubject<string>(_router.url);
     _router.events.pipe(
-      filter(evt => evt instanceof NavigationEnd),
+      filter(e => e instanceof NavigationEnd),
       takeUntil(this._isComponentDestroyedS$),
     ).subscribe(() => {
       this._currentUrlBS$.next(_router.url);
+    });
+
+    this._searchRegExpBS$ = new BehaviorSubject<RegExp>((new RegExp(this.searchStringC.value)));
+    this.searchStringC.valueChanges.pipe(
+      distinctUntilChanged(),
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe(searchString => {
+      this._searchRegExpBS$.next(
+        new RegExp(escapeRegExp(searchString), 'i'),
+      );
     });
   }
 
@@ -66,14 +80,42 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
     parentRoute?: MainMenuExtended,
   ) {
+    this._extendRouteWithMatchesSearchRegExp(route, parentRoute);
     this._extendRouteWithMatchesUrl(route, parentRoute);
 
     if (route.items) {
+      this._extendRouteWithHasChildrenThatMatchSearchRegExp(route, parentRoute);
       this._extendRouteWithHasChildrenThatMatchUrl(route, parentRoute);
 
       for (const childRoute of route.items) {
         this._extendRoute(childRoute, route);
       }
+    }
+  }
+
+  private _extendRouteWithHasChildrenThatMatchSearchRegExp(
+    route: MainMenuExtended,
+    parentRoute?: MainMenuExtended,
+  ) {
+    route.hasChildrenThatMatchSearchRegExpBS$ = new BehaviorSubject<boolean>(true);
+    route.countOfChildrenThatMatchSearchRegExpBS$ = new BehaviorSubject<number>(0);
+    route.countOfChildrenThatMatchSearchRegExpBS$.pipe(
+      takeUntil(this._changeS$),
+    ).subscribe(countOfChildrenThatMatchSearchRegExp => {
+      route.hasChildrenThatMatchSearchRegExpBS$.next(countOfChildrenThatMatchSearchRegExp > 0);
+    });
+
+    if (parentRoute) {
+      route.hasChildrenThatMatchSearchRegExpBS$.pipe(
+        startWith(true),
+        distinctUntilChanged(),
+        takeUntil(this._changeS$),
+      ).subscribe(hasChildrenThatMatchSearchRegExp => {
+        const countOfChildrenThatMatchSearchRegExp = parentRoute.countOfChildrenThatMatchSearchRegExpBS$.getValue();
+        parentRoute.countOfChildrenThatMatchSearchRegExpBS$.next(
+          hasChildrenThatMatchSearchRegExp ? countOfChildrenThatMatchSearchRegExp + 1 : countOfChildrenThatMatchSearchRegExp - 1,
+        );
+      });
     }
   }
 
@@ -98,6 +140,31 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
         const countOfChildrenThatMatchUrl = parentRoute.countOfChildrenThatMatchUrlBS$.getValue();
         parentRoute.countOfChildrenThatMatchUrlBS$.next(
           hasChildrenThatMatchUrl ? countOfChildrenThatMatchUrl + 1 : countOfChildrenThatMatchUrl - 1,
+        );
+      });
+    }
+  }
+
+  private _extendRouteWithMatchesSearchRegExp(
+    route: MainMenuExtended,
+    parentRoute?: MainMenuExtended,
+  ) {
+    route.matchesSearchRegExpBS$ = new BehaviorSubject<boolean>(this._searchRegExpBS$.getValue().test(route.text));
+    this._searchRegExpBS$.pipe(
+      takeUntil(this._changeS$),
+    ).subscribe(searchRegExp => {
+      route.matchesSearchRegExpBS$.next(searchRegExp.test(route.text));
+    });
+
+    if (parentRoute) {
+      route.matchesSearchRegExpBS$.pipe(
+        startWith(true),
+        distinctUntilChanged(),
+        takeUntil(this._changeS$),
+      ).subscribe(matchesSearchRegExp => {
+        const countOfChildrenThatMatchSearchRegExp = parentRoute.countOfChildrenThatMatchSearchRegExpBS$.getValue();
+        parentRoute.countOfChildrenThatMatchSearchRegExpBS$.next(
+          matchesSearchRegExp ? countOfChildrenThatMatchSearchRegExp + 1 : countOfChildrenThatMatchSearchRegExp - 1,
         );
       });
     }
