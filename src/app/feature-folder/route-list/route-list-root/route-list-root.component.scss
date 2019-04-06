@@ -1,0 +1,13 @@
+.route-list-container {
+  max-height: calc(100% - 4.1rem);
+  overflow: auto;
+
+  &::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(256, 256, 256, .26);
+  }
+}
