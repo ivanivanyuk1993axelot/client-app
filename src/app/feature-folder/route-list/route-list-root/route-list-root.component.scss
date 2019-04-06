@@ -1,5 +1,9 @@
 @import '../../../style-folder/scrollbar';
 
+::ng-deep .custom-scrollbar {
+  @include scrollbar;
+}
+
 .route-list-container {
   max-height: calc(100% - 4.1rem);
   overflow: auto;
