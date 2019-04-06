@@ -2,9 +2,9 @@ import {NgModule} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {RouteListComponent} from './route-list/route-list.component';
 import {RouteListRootComponent} from './route-list-root/route-list-root.component';
-import {MatIconModule, MatListModule} from '@angular/material';
+import {MatIconModule, MatInputModule, MatListModule} from '@angular/material';
 import {RouterModule} from '@angular/router';
-import { RouteComponent } from './route/route.component';
+import {RouteComponent} from './route/route.component';
 import {ReactiveFormsModule} from '@angular/forms';
 
 @NgModule({
@@ -13,9 +13,10 @@ import {ReactiveFormsModule} from '@angular/forms';
   imports: [
     CommonModule,
     MatIconModule,
+    MatInputModule,
     MatListModule,
-    RouterModule,
     ReactiveFormsModule,
+    RouterModule,
   ]
 })
 export class RouteListModule {

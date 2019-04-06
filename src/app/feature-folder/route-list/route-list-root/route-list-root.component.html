@@ -1,4 +1,16 @@
-<input [formControl]="searchStringC">
+<mat-form-field class="w-100">
+  <span matPrefix>&nbsp;</span>
+  <mat-icon matPrefix>search</mat-icon>
+  <span matPrefix>&nbsp;</span>
+  <!-- todo вынести в localizationService -->
+  <mat-label>Поиск</mat-label>
+  <!--  [matAutocomplete]="matAutocomplete"-->
+  <input
+    [formControl]="searchStringC"
+    matInput
+    type="search"
+  >
+</mat-form-field>
 
 <app-route-list
   [routeList]="routeListExtendedBS$ | async"
