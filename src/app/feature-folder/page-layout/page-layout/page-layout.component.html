@@ -9,7 +9,9 @@
     opened="true"
   >
     <ng-container *ngTemplateOutlet="toolBar"></ng-container>
-    <pre>{{ menuService.mainMenuListBS$ | async | json }}</pre>
+    <app-route-list-root
+      [routeList]="menuService.mainMenuListBS$ | async"
+    ></app-route-list-root>
   </mat-sidenav>
   <mat-sidenav-content>
     <ng-container *ngTemplateOutlet="toolBar"></ng-container>

@@ -1,0 +1,19 @@
+<mat-nav-list>
+  <div
+    [ngClass]="{active: (route.matchesUrlBS$ | async) || (route.hasChildrenThatMatchUrlBS$ | async)}"
+    *ngFor="let route of routeList"
+  >
+    <app-route
+      [route]="route"
+    ></app-route>
+<!--    [ngClass]="{hidden: !(routeData.hasFilteredChildRouteListSubject$ | async)}"-->
+    <div
+      *ngIf="route.items"
+      class="route-list"
+    >
+      <app-route-list
+        [routeList]="route.items"
+      ></app-route-list>
+    </div>
+  </div>
+</mat-nav-list>

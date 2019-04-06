@@ -1,0 +1,16 @@
+<!--      [ngClass]="{hidden: !(routeData.matchesSearchRegExpSubject$ | async)}"-->
+<a
+  [ngClass]="{ active: route.matchesUrlBS$ | async }"
+  [routerLink]="route.action === '#' ? null : route.action"
+  mat-list-item
+>
+  <ng-container [ngTemplateOutlet]="routeTemplate"></ng-container>
+</a>
+
+<ng-template #routeTemplate>
+  <ng-container *ngIf="route.imageUrl">
+    <mat-icon>{{ false ? route.imageUrl : 'home' }}</mat-icon>&nbsp;
+  </ng-container>
+
+  <ng-container *ngIf="route.text">{{ route.text }}</ng-container>
+</ng-template>
