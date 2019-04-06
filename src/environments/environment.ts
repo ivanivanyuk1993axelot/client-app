@@ -4,6 +4,7 @@
 
 export const environment = {
   apiUrl: 'http://localhost:6101/api/UIService',
+  appTitle: 'WMS E5',
   production: false,
 };
 
