@@ -4,6 +4,7 @@ import { PageLayoutComponent } from './page-layout/page-layout.component';
 import { LayoutModule } from '@angular/cdk/layout';
 import { MatToolbarModule, MatButtonModule, MatSidenavModule, MatIconModule, MatListModule } from '@angular/material';
 import {RouterModule} from '@angular/router';
+import {FlexSpacerModule} from '../flex-spacer/flex-spacer.module';
 
 @NgModule({
   declarations: [PageLayoutComponent],
@@ -12,12 +13,13 @@ import {RouterModule} from '@angular/router';
   ],
   imports: [
     CommonModule,
+    FlexSpacerModule,
     LayoutModule,
-    MatToolbarModule,
     MatButtonModule,
-    MatSidenavModule,
     MatIconModule,
     MatListModule,
+    MatSidenavModule,
+    MatToolbarModule,
     RouterModule
   ]
 })
