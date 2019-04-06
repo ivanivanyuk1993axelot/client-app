@@ -66,6 +66,47 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
     parentRoute?: MainMenuExtended,
   ) {
+    this._extendRouteWithMatchesUrl(route, parentRoute);
+
+    if (route.items) {
+      this._extendRouteWithHasChildrenThatMatchUrl(route, parentRoute);
+
+      for (const childRoute of route.items) {
+        this._extendRoute(childRoute, route);
+      }
+    }
+  }
+
+  private _extendRouteWithHasChildrenThatMatchUrl(
+    route: MainMenuExtended,
+    parentRoute?: MainMenuExtended,
+  ) {
+    route.hasChildrenThatMatchUrlBS$ = new BehaviorSubject<boolean>(true);
+    route.countOfChildrenThatMatchUrlBS$ = new BehaviorSubject<number>(0);
+    route.countOfChildrenThatMatchUrlBS$.pipe(
+      takeUntil(this._changeS$),
+    ).subscribe(countOfChildrenThatMatchUrl => {
+      route.hasChildrenThatMatchUrlBS$.next(countOfChildrenThatMatchUrl > 0);
+    });
+
+    if (parentRoute) {
+      route.hasChildrenThatMatchUrlBS$.pipe(
+        startWith(true),
+        distinctUntilChanged(),
+        takeUntil(this._changeS$),
+      ).subscribe(hasChildrenThatMatchUrl => {
+        const countOfChildrenThatMatchUrl = parentRoute.countOfChildrenThatMatchUrlBS$.getValue();
+        parentRoute.countOfChildrenThatMatchUrlBS$.next(
+          hasChildrenThatMatchUrl ? countOfChildrenThatMatchUrl + 1 : countOfChildrenThatMatchUrl - 1,
+        );
+      });
+    }
+  }
+
+  private _extendRouteWithMatchesUrl(
+    route: MainMenuExtended,
+    parentRoute?: MainMenuExtended,
+  ) {
     route.matchesUrlBS$ = new BehaviorSubject<boolean>(route.action === this._currentUrlBS$.getValue());
     this._currentUrlBS$.pipe(
       takeUntil(this._changeS$),
@@ -84,32 +125,6 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
           matchesUrl ? countOfChildrenThatMatchUrl + 1 : countOfChildrenThatMatchUrl - 1,
         );
       });
-    }
-
-    if (route.items) {
-      route.hasChildrenThatMatchUrlBS$ = new BehaviorSubject<boolean>(true);
-      route.countOfChildrenThatMatchUrlBS$ = new BehaviorSubject<number>(0);
-      route.countOfChildrenThatMatchUrlBS$.pipe(
-        takeUntil(this._changeS$),
-      ).subscribe(countOfChildrenThatMatchUrl => {
-        route.hasChildrenThatMatchUrlBS$.next(countOfChildrenThatMatchUrl > 0);
-      });
-      if (parentRoute) {
-        route.hasChildrenThatMatchUrlBS$.pipe(
-          startWith(true),
-          distinctUntilChanged(),
-          takeUntil(this._changeS$),
-        ).subscribe(hasChildrenThatMatchUrl => {
-          const countOfChildrenThatMatchUrl = parentRoute.countOfChildrenThatMatchUrlBS$.getValue();
-          parentRoute.countOfChildrenThatMatchUrlBS$.next(
-            hasChildrenThatMatchUrl ? countOfChildrenThatMatchUrl + 1 : countOfChildrenThatMatchUrl - 1,
-          );
-        });
-      }
-
-      for (const childRoute of route.items) {
-        this._extendRoute(childRoute, route);
-      }
     }
   }
 }
