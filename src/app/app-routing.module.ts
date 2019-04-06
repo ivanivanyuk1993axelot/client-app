@@ -6,6 +6,10 @@ const appRoutes: Routes = [
     loadChildren: './page-folder/debug/debug.module#DebugModule',
     path: 'debug',
   },
+  {
+    loadChildren: './page-folder/page-404/page-404.module#Page404Module',
+    path: '**',
+  },
 ];
 
 @NgModule({
