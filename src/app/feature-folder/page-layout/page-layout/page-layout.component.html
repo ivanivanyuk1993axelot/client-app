@@ -1,3 +1,23 @@
+<mat-toolbar color="primary">
+  <button
+    (click)="drawer.toggle()"
+    aria-label="Toggle sidenav"
+    mat-icon-button
+    type="button"
+  >
+    <mat-icon>menu</mat-icon>
+  </button>
+  {{ appTitle }}
+  <app-flex-spacer></app-flex-spacer>
+  <button
+    aria-label="Toggle sidenav"
+    mat-icon-button
+    type="button"
+  >
+    <mat-icon>person</mat-icon>
+  </button>
+</mat-toolbar>
+
 <mat-sidenav-container
   autosize
   class="sidenav-container"
@@ -8,35 +28,11 @@
     class="sidenav"
     opened="true"
   >
-    <ng-container *ngTemplateOutlet="toolBar"></ng-container>
     <app-route-list-root
       [routeList]="menuService.mainMenuListBS$ | async"
     ></app-route-list-root>
   </mat-sidenav>
   <mat-sidenav-content>
-    <ng-container *ngTemplateOutlet="toolBar"></ng-container>
     <router-outlet></router-outlet>
   </mat-sidenav-content>
 </mat-sidenav-container>
-
-<ng-template #toolBar>
-  <mat-toolbar color="primary">
-    <button
-      (click)="drawer.toggle()"
-      aria-label="Toggle sidenav"
-      mat-icon-button
-      type="button"
-    >
-      <mat-icon>menu</mat-icon>
-    </button>
-    {{ appTitle }}
-    <app-flex-spacer></app-flex-spacer>
-    <button
-      aria-label="Toggle sidenav"
-      mat-icon-button
-      type="button"
-    >
-      <mat-icon>person</mat-icon>
-    </button>
-  </mat-toolbar>
-</ng-template>
