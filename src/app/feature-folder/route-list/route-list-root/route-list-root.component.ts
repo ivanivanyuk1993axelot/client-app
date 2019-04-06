@@ -89,7 +89,9 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
     routeListFlat: Array<MainMenuExtended>,
   ) {
-    routeListFlat.push(route);
+    if (this._hasRouteUrl(route)) {
+      routeListFlat.push(route);
+    }
 
     if (route.items) {
       for (const childRoute of route.items) {

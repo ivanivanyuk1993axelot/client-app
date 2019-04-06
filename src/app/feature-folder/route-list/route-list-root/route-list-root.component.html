@@ -10,25 +10,26 @@
     matInput
     type="search"
   >
-  <mat-autocomplete
-    #matAutocomplete="matAutocomplete"
-    autoActiveFirstOption
-    panelWidth="auto"
-  >
-    <ng-container
-      *ngFor="let route of routeListExtendedFlatBS$ | async"
-    >
-      <mat-option
-        (onSelectionChange)="selectOption($event, route)"
-        *ngIf="route.matchesSearchRegExpBS$ | async"
-        [value]="route.text"
-      >
-        <mat-icon *ngIf="route.imageUrl">home</mat-icon>
-        {{route.text}}
-      </mat-option>
-    </ng-container>
-  </mat-autocomplete>
 </mat-form-field>
+<mat-autocomplete
+  #matAutocomplete="matAutocomplete"
+  autoActiveFirstOption
+  panelWidth="auto"
+>
+  <ng-container
+    *ngFor="let route of routeListExtendedFlatBS$ | async"
+  >
+    <mat-option
+      (onSelectionChange)="selectOption($event, route)"
+      *ngIf="route.matchesSearchRegExpBS$ | async"
+      [value]="route.text"
+    >
+      <mat-icon *ngIf="route.imageUrl">home</mat-icon>
+      {{route.text}}
+    </mat-option>
+  </ng-container>
+</mat-autocomplete>
+
 
 <div class="route-list-container">
   <app-route-list
