@@ -69,6 +69,8 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
   public ngOnDestroy(): void {
     this._changeS$.next();
     this._changeS$.complete();
+
+    this._broadcastComponentDestroyed();
   }
 
   public selectOption(
