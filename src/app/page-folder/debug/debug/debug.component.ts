@@ -3,6 +3,7 @@ import {ApiService} from '../../../service-folder/api/api.service';
 import {forkJoin} from 'rxjs';
 import {mainMenu} from './migration-folder/main-menu';
 import {MenuService} from '../../../service-folder/menu/menu.service';
+import {NotificationService} from '../../../service-folder/notification/notification/notification.service';
 
 declare var require: any;
 const dicts = require('./migration-folder/DictionaryEditor.json');
@@ -23,6 +24,7 @@ export class DebugComponent {
   constructor(
     private _apiService: ApiService,
     private _menuService: MenuService,
+    public notificationService: NotificationService,
   ) {
   }
 
