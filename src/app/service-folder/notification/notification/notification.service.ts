@@ -46,7 +46,7 @@ export class NotificationService {
     });
     this._messageListBS$.next(messageList);
 
-    timer(1000).pipe(
+    timer(3000).pipe(
       first(),
     ).subscribe(() => {
       console.log(this._increment);

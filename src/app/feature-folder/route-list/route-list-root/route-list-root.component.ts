@@ -18,6 +18,7 @@ import {MatOptionSelectionChange} from '@angular/material';
 export class RouteListRootComponent implements BroadcastComponentDestroyed, OnChanges, OnDestroy {
   @Input() routeList: Array<MainMenu>;
 
+  public isSearchInProgressBS$: BehaviorSubject<boolean>;
   public routeListExtendedBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
   public routeListExtendedFlatBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
   public searchStringC = new FormControl('');
@@ -39,11 +40,14 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
       this._currentUrlBS$.next(_router.url);
     });
 
+    this.isSearchInProgressBS$ = new BehaviorSubject<boolean>(this.searchStringC.value !== '');
     this._searchRegExpBS$ = new BehaviorSubject<RegExp>((new RegExp(this.searchStringC.value)));
     this.searchStringC.valueChanges.pipe(
       distinctUntilChanged(),
       takeUntil(this._isComponentDestroyedS$),
     ).subscribe(searchString => {
+      this.isSearchInProgressBS$.next(searchString !== '');
+
       this._searchRegExpBS$.next(
         new RegExp(escapeRegExp(searchString), 'i'),
       );

@@ -1,15 +1,38 @@
-<a
-  [ngClass]="{ active: route.matchesUrlBS$ | async, hidden: !(route.matchesSearchRegExpBS$ | async) }"
-  [routerLink]="route.action === '#' ? null : route.action"
-  mat-list-item
+<mat-expansion-panel
+  (expandedChange)="onExpandedChange($event)"
+  *ngIf="route.items; else itemComponent"
+  [expanded]="isExpanded || (isSearchInProgressBS$ | async)"
+  [ngClass]="{ active: (route.matchesUrlBS$ | async) || (route.hasChildrenThatMatchUrlBS$ | async), hidden: !(route.matchesSearchRegExpBS$ | async) && !(route.hasChildrenThatMatchSearchRegExpBS$ | async) }"
 >
-  <ng-container [ngTemplateOutlet]="routeTemplate"></ng-container>
-</a>
+  <mat-expansion-panel-header
+    [ngClass]="{ hidden: !(route.matchesSearchRegExpBS$ | async) }"
+  >
+    <mat-panel-title>
+      <ng-container [ngTemplateOutlet]="itemComponent"></ng-container>
+    </mat-panel-title>
+  </mat-expansion-panel-header>
+  <app-route-list
+    [isSearchInProgressBS$]="isSearchInProgressBS$"
+    [ngClass]="{ hidden: !(isExpanded || (isSearchInProgressBS$ | async)) || !(route.hasChildrenThatMatchSearchRegExpBS$ | async) }"
+    [routeList]="route.items"
+  ></app-route-list>
+</mat-expansion-panel>
 
-<ng-template #routeTemplate>
-  <ng-container *ngIf="route.imageUrl">
-    <mat-icon>{{ false ? route.imageUrl : 'home' }}</mat-icon>&nbsp;
-  </ng-container>
+<ng-template #itemComponent>
+  <a
+    *ngIf="route.action !== '#'; else itemTextComponent"
+    [ngClass]="{ active: route.matchesUrlBS$ | async, hidden: !(route.matchesSearchRegExpBS$ | async) }"
+    [routerLink]="route.action"
+    mat-list-item
+  >
+    <ng-container [ngTemplateOutlet]="itemTextComponent"></ng-container>
+  </a>
 
-  <ng-container *ngIf="route.text">{{ route.text }}</ng-container>
+  <ng-template #itemTextComponent>
+    <ng-container *ngIf="route.imageUrl">
+      <mat-icon>{{ false ? route.imageUrl : 'home' }}</mat-icon>&nbsp;
+    </ng-container>
+
+    <ng-container *ngIf="route.text">{{ route.text }}</ng-container>
+  </ng-template>
 </ng-template>
