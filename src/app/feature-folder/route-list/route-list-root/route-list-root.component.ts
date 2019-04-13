@@ -28,7 +28,7 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
   private _changeS$ = new Subject<void>();
   private _currentUrlBS$: BehaviorSubject<string>;
   private _isLevenshteinComputing: BehaviorSubject<boolean>;
-  private _levenshteingComputingInProgressCountBS$ = new BehaviorSubject<number>(0);
+  private _levenshteinComputingInProgressCountBS$ = new BehaviorSubject<number>(0);
   private _levenshteinMismatchThreshold = 2;
   private _routeListExtendedFlatBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
   private _searchStringLowerCasedBS$: BehaviorSubject<string>;
