@@ -1,9 +1,9 @@
 import {Component, Input, OnChanges, OnDestroy} from '@angular/core';
 import {MainMenu} from '../../../service-folder/menu/main-menu';
-import {BehaviorSubject, combineLatest, interval, Subject} from 'rxjs';
+import {BehaviorSubject, combineLatest, Subject} from 'rxjs';
 import {MainMenuExtended} from './main-menu-extended';
 import {NavigationEnd, Router} from '@angular/router';
-import {distinctUntilChanged, filter, startWith, takeUntil} from 'rxjs/operators';
+import {distinctUntilChanged, filter, startWith, takeUntil, withLatestFrom} from 'rxjs/operators';
 import {BroadcastComponentDestroyed} from '../../../mixin-folder/broadcast-component-destroyed';
 import {applyMixins} from 'rxjs/internal-compatibility';
 import {FormControl} from '@angular/forms';
@@ -27,9 +27,9 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
 
   private _changeS$ = new Subject<void>();
   private _currentUrlBS$: BehaviorSubject<string>;
-  private _isLevenshteinComputing: BehaviorSubject<boolean>;
+  private _isLevenshteinComputingBS$: BehaviorSubject<boolean>;
   private _levenshteinComputingInProgressCountBS$ = new BehaviorSubject<number>(0);
-  private _levenshteinMismatchThreshold = 2;
+  private _levenshteinMismatchThreshold = 1;
   private _routeListExtendedFlatBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
   private _searchStringLowerCasedBS$: BehaviorSubject<string>;
 
@@ -39,44 +39,9 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     this._subscribeToRouterEvents();
     this._subscribeToSearchString();
     this._subscribeToRouteListExtended();
+    this._subscribeToLevenshteinComputingInProgressCount();
 
-    interval(1000).subscribe(() => {
-      const routeListSorted = Object.assign([], this._routeListExtendedFlatBS$.getValue());
-      routeListSorted.sort((left, right) => {
-        const leftDistance = left.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
-        const rightDistance = right.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
-        if (leftDistance < rightDistance) {
-          return -1;
-        }
-        if (leftDistance > rightDistance) {
-          return 1;
-        }
-        return 0;
-      });
-
-      this.routeListExtendedFlatSortedBS$.next(routeListSorted);
-    });
-    // combineLatest(
-    //   this._routeListExtendedFlatBS$,
-    //   this.searchStringC.valueChanges,
-    // ).pipe(
-    //   takeUntil(this._isComponentDestroyedS$),
-    // ).subscribe(([routeListExtendedFlat, searchString]) => {
-    //   const routeListSorted = Object.assign([], routeListExtendedFlat);
-    //   routeListSorted.sort((left, right) => {
-    //     const leftDistance = left.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
-    //     const rightDistance = right.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
-    //     if (leftDistance < rightDistance) {
-    //       return -1;
-    //     }
-    //     if (leftDistance > rightDistance) {
-    //       return 1;
-    //     }
-    //     return 0;
-    //   });
-    //
-    //   this.routeListExtendedFlatSortedBS$.next(routeListSorted);
-    // });
+    this._subscribeRouteListSorted();
   }
 
   public ngOnChanges(): void {
@@ -121,6 +86,21 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
         this._appendRouteToFlatList(childRoute, routeListFlat);
       }
     }
+  }
+
+  private _computeRouteListCount(
+    routeList: Array<MainMenu>
+  ): number {
+    let count = 0;
+
+    for (const route of routeList) {
+      count++;
+      if (route.items) {
+        count += this._computeRouteListCount(route.items);
+      }
+    }
+
+    return count;
   }
 
   private _computeRouteListExtended(
@@ -192,11 +172,11 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
       route.hasChildrenThatMatchSearchBS$.pipe(
         startWith(true),
         distinctUntilChanged(),
+        withLatestFrom(parentRoute.countOfChildrenThatMatchSearchBS$),
         takeUntil(this._changeS$),
-      ).subscribe(hasChildrenThatMatchSearch => {
-        const countOfChildrenThatMatchSearch = parentRoute.countOfChildrenThatMatchSearchBS$.getValue();
+      ).subscribe(([hasChildrenThatMatchSearch, parentCountOfChildrenThatMatchSearch]) => {
         parentRoute.countOfChildrenThatMatchSearchBS$.next(
-          hasChildrenThatMatchSearch ? countOfChildrenThatMatchSearch + 1 : countOfChildrenThatMatchSearch - 1,
+          hasChildrenThatMatchSearch ? parentCountOfChildrenThatMatchSearch + 1 : parentCountOfChildrenThatMatchSearch - 1,
         );
       });
     }
@@ -218,11 +198,11 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
       route.hasChildrenThatMatchUrlBS$.pipe(
         startWith(true),
         distinctUntilChanged(),
+        withLatestFrom(parentRoute.countOfChildrenThatMatchUrlBS$),
         takeUntil(this._changeS$),
-      ).subscribe(hasChildrenThatMatchUrl => {
-        const countOfChildrenThatMatchUrl = parentRoute.countOfChildrenThatMatchUrlBS$.getValue();
+      ).subscribe(([hasChildrenThatMatchUrl, parentCountOfChildrenThatMatchUrl]) => {
         parentRoute.countOfChildrenThatMatchUrlBS$.next(
-          hasChildrenThatMatchUrl ? countOfChildrenThatMatchUrl + 1 : countOfChildrenThatMatchUrl - 1,
+          hasChildrenThatMatchUrl ? parentCountOfChildrenThatMatchUrl + 1 : parentCountOfChildrenThatMatchUrl - 1,
         );
       });
     }
@@ -235,6 +215,13 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route.levenshteinDistanceToSearchStringAmortizedBS$ = new BehaviorSubject(
       computeLevenshteinDistanceAmortized(route.textLowerCased, this._searchStringLowerCasedBS$.getValue()),
     );
+    route.levenshteinDistanceToSearchStringAmortizedBS$.pipe(
+      withLatestFrom(this._levenshteinComputingInProgressCountBS$),
+      takeUntil(this._changeS$),
+    ).subscribe(([_, levenshteinComputingInProgressCount]) => {
+      this._levenshteinComputingInProgressCountBS$.next(levenshteinComputingInProgressCount - 1);
+    });
+
     this._searchStringLowerCasedBS$.pipe(
       takeUntil(this._changeS$),
     ).subscribe(searchString => {
@@ -267,11 +254,11 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
       route.matchesSearchBS$.pipe(
         startWith(true),
         distinctUntilChanged(),
+        withLatestFrom(parentRoute.countOfChildrenThatMatchSearchBS$),
         takeUntil(this._changeS$),
-      ).subscribe(matchesSearchRegExp => {
-        const countOfChildrenThatMatchSearch = parentRoute.countOfChildrenThatMatchSearchBS$.getValue();
+      ).subscribe(([matchesSearch, parentCountOfChildrenThatMatchSearch]) => {
         parentRoute.countOfChildrenThatMatchSearchBS$.next(
-          matchesSearchRegExp ? countOfChildrenThatMatchSearch + 1 : countOfChildrenThatMatchSearch - 1,
+          matchesSearch ? parentCountOfChildrenThatMatchSearch + 1 : parentCountOfChildrenThatMatchSearch - 1,
         );
       });
     }
@@ -292,11 +279,11 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
       route.matchesUrlBS$.pipe(
         startWith(true),
         distinctUntilChanged(),
+        withLatestFrom(parentRoute.countOfChildrenThatMatchUrlBS$),
         takeUntil(this._changeS$),
-      ).subscribe(matchesUrl => {
-        const countOfChildrenThatMatchUrl = parentRoute.countOfChildrenThatMatchUrlBS$.getValue();
+      ).subscribe(([matchesUrl, parentCountOfChildrenThatMatchUrl]) => {
         parentRoute.countOfChildrenThatMatchUrlBS$.next(
-          matchesUrl ? countOfChildrenThatMatchUrl + 1 : countOfChildrenThatMatchUrl - 1,
+          matchesUrl ? parentCountOfChildrenThatMatchUrl + 1 : parentCountOfChildrenThatMatchUrl - 1,
         );
       });
     }
@@ -306,6 +293,43 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
   ) {
     return route.action !== '#';
+  }
+
+  private _subscribeRouteListSorted() {
+    this._isLevenshteinComputingBS$.pipe(
+      startWith(false),
+      distinctUntilChanged(),
+      filter(x => !x),
+      withLatestFrom(this._routeListExtendedFlatBS$),
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe(([_, routeListExtendedFlat]) => {
+      console.log(1);
+      const routeListSorted = Object.assign([], routeListExtendedFlat);
+      routeListSorted.sort((left, right) => {
+        const leftDistance = left.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
+        const rightDistance = right.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
+        if (leftDistance < rightDistance) {
+          return -1;
+        }
+        if (leftDistance > rightDistance) {
+          return 1;
+        }
+        return 0;
+      });
+
+      this.routeListExtendedFlatSortedBS$.next(routeListSorted);
+    });
+  }
+
+  private _subscribeToLevenshteinComputingInProgressCount() {
+    this._isLevenshteinComputingBS$ = new BehaviorSubject<boolean>(
+      this._levenshteinComputingInProgressCountBS$.getValue() > 0
+    );
+    this._levenshteinComputingInProgressCountBS$.pipe(
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe(count => {
+      this._isLevenshteinComputingBS$.next(count > 0);
+    });
   }
 
   private _subscribeToRouterEvents() {
@@ -332,11 +356,13 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     this.isSearchInProgressBS$ = new BehaviorSubject<boolean>(this.searchStringC.value !== '');
     this._searchStringLowerCasedBS$ = new BehaviorSubject<string>(this.searchStringC.value.toLowerCase());
     this.searchStringC.valueChanges.pipe(
+      withLatestFrom(this.routeListExtendedBS$),
       distinctUntilChanged(),
       takeUntil(this._isComponentDestroyedS$),
-    ).subscribe(searchString => {
+    ).subscribe(([searchString, routeList]) => {
       this.isSearchInProgressBS$.next(searchString !== '');
       this._searchStringLowerCasedBS$.next(searchString.toLowerCase());
+      this._levenshteinComputingInProgressCountBS$.next(this._computeRouteListCount(routeList));
     });
   }
 }
