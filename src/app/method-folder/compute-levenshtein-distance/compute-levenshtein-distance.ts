@@ -28,19 +28,23 @@ export function computeLevenshteinDistance(leftString: string, rightString: stri
   }
 
   // Fill in the rest of the matrix
+  let costList;
+  let newCostList;
   for (longerStringIndex = 1; longerStringIndex <= longerString.length; longerStringIndex++) {
     for (shorterStringIndex = 1; shorterStringIndex <= shorterString.length; shorterStringIndex++) {
+      costList = matrix[longerStringIndex - 1];
+      newCostList = matrix[longerStringIndex];
       if (longerString[longerStringIndex - 1] === shorterString[shorterStringIndex - 1]) {
-        matrix[longerStringIndex][shorterStringIndex] = matrix[longerStringIndex - 1][shorterStringIndex - 1];
+        newCostList[shorterStringIndex] = costList[shorterStringIndex - 1];
       } else {
-        matrix[longerStringIndex][shorterStringIndex] = Math.min(
-          matrix[longerStringIndex - 1][shorterStringIndex - 1] + 1, // substitution
-          matrix[longerStringIndex - 1][shorterStringIndex] + 1, // deletion
-          matrix[longerStringIndex][shorterStringIndex - 1] + 1, // insertion
+        newCostList[shorterStringIndex] = Math.min(
+          costList[shorterStringIndex - 1] + 1, // substitution
+          costList[shorterStringIndex] + 1, // deletion
+          newCostList[shorterStringIndex - 1] + 1, // insertion
         );
       }
     }
   }
 
-  return matrix[longerString.length][shorterString.length];
+  return newCostList[shorterString.length];
 }

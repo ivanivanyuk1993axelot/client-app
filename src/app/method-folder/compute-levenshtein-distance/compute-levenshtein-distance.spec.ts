@@ -10,5 +10,6 @@ describe('MenuService', () => {
     expect(computeLevenshteinDistance('day', 'a')).toBe(2);
     expect(computeLevenshteinDistance('ячейки', 'а')).toBe(6);
     expect(computeLevenshteinDistance('', '')).toBe(0);
+    expect(computeLevenshteinDistance('', '1')).toBe(1);
   });
 });
