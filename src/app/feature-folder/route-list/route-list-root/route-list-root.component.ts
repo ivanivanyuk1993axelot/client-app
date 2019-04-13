@@ -314,13 +314,15 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
         filter(x => !x),
       ),
       this._routeListExtendedFlatBS$,
-      this._searchStringLowerCasedBS$,
     ).pipe(
+      withLatestFrom(this._searchStringLowerCasedBS$),
       takeUntil(this._isComponentDestroyedS$),
     ).subscribe((
       [
-        _,
-        routeListExtendedFlat,
+        [
+          _,
+          routeListExtendedFlat,
+        ],
         searchStringLowerCased,
       ]
     ) => {
