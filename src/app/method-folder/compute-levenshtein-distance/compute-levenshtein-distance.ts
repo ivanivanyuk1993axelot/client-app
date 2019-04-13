@@ -1,42 +1,44 @@
-export function computeLevenshteinDistance(
-  a: string,
-  b: string,
-): number {
-  if (a.length === 0) {
-    return b.length;
-  }
-  if (b.length === 0) {
-    return a.length;
-  }
-
+export function computeLevenshteinDistance(leftString: string, rightString: string): number {
   let shorterString: string;
   let longerString: string;
-  if (a.length < b.length) {
-    [shorterString, longerString] = [a, b];
+  if (leftString.length < rightString.length) {
+    shorterString = leftString;
+    longerString = rightString;
   } else {
-    [shorterString, longerString] = [b, a];
+    shorterString = rightString;
+    longerString = leftString;
   }
 
-  const longerStringLength = longerString.length;
-  const shorterStringLength = shorterString.length;
-  let previousDistanceList = new Array<number>(shorterStringLength + 1);
-  let currentDistanceList = new Array<number>(shorterStringLength + 1);
-
-  for (let i = 0; i < shorterStringLength; i++) {
-    previousDistanceList[i] = i;
+  if (shorterString.length === 0) {
+    return longerString.length;
   }
 
-  for (let i = 0; i < longerStringLength - 1; i++) {
-    currentDistanceList[0] = i + 1;
-    for (let j = 0; j < shorterStringLength - 1; j++) {
-      const deletionCost = previousDistanceList[j + 1] + 1;
-      const insertionCost = currentDistanceList[j] + 1;
-      const substitutionCost = longerString[i] === shorterString[j] ? previousDistanceList[j] : previousDistanceList[j] + 1;
+  const matrix = [];
 
-      currentDistanceList[j + 1] = Math.min(deletionCost, insertionCost, substitutionCost);
+  // increment along the first column of each row
+  let longerStringIndex;
+  for (longerStringIndex = 0; longerStringIndex <= longerString.length; longerStringIndex++) {
+    matrix[longerStringIndex] = [longerStringIndex];
+  }
+
+  // increment each column in the first row
+  let shorterStringIndex;
+  for (shorterStringIndex = 0; shorterStringIndex <= shorterString.length; shorterStringIndex++) {
+    matrix[0][shorterStringIndex] = shorterStringIndex;
+  }
+
+  // Fill in the rest of the matrix
+  for (longerStringIndex = 1; longerStringIndex <= longerString.length; longerStringIndex++) {
+    for (shorterStringIndex = 1; shorterStringIndex <= shorterString.length; shorterStringIndex++) {
+      if (longerString.charAt(longerStringIndex - 1) === shorterString.charAt(shorterStringIndex - 1)) {
+        matrix[longerStringIndex][shorterStringIndex] = matrix[longerStringIndex - 1][shorterStringIndex - 1];
+      } else {
+        matrix[longerStringIndex][shorterStringIndex] = Math.min(matrix[longerStringIndex - 1][shorterStringIndex - 1] + 1, // substitution
+          Math.min(matrix[longerStringIndex][shorterStringIndex - 1] + 1, // insertion
+            matrix[longerStringIndex - 1][shorterStringIndex] + 1)); // deletion
+      }
     }
-    [previousDistanceList, currentDistanceList] = [currentDistanceList, previousDistanceList];
   }
 
-  return previousDistanceList[shorterStringLength - 1];
+  return matrix[longerString.length][shorterString.length];
 }
