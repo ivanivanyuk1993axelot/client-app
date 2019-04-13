@@ -39,6 +39,7 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     this._subscribeToRouterEvents();
     this._subscribeToSearchString();
     this._subscribeToRouteListExtended();
+    this._subscribeLevenshteinComputingInProgressCount();
     this._subscribeToLevenshteinComputingInProgressCount();
 
     this._subscribeRouteListSorted();
@@ -295,15 +296,34 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     return route.action !== '#';
   }
 
-  private _subscribeRouteListSorted() {
-    this._isLevenshteinComputingBS$.pipe(
-      startWith(false),
-      distinctUntilChanged(),
-      filter(x => !x),
-      withLatestFrom(this._routeListExtendedFlatBS$),
+  private _subscribeLevenshteinComputingInProgressCount() {
+    combineLatest(
+      this.routeListExtendedBS$,
+      this._searchStringLowerCasedBS$,
+    ).pipe(
       takeUntil(this._isComponentDestroyedS$),
-    ).subscribe(([_, routeListExtendedFlat]) => {
-      console.log(1);
+    ).subscribe(([routeList, _]) => {
+      this._levenshteinComputingInProgressCountBS$.next(this._computeRouteListCount(routeList));
+    });
+  }
+
+  private _subscribeRouteListSorted() {
+    combineLatest(
+      this._isLevenshteinComputingBS$.pipe(
+        distinctUntilChanged(),
+        filter(x => !x),
+      ),
+      this._routeListExtendedFlatBS$,
+      this._searchStringLowerCasedBS$,
+    ).pipe(
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe((
+      [
+        _,
+        routeListExtendedFlat,
+        searchStringLowerCased,
+      ]
+    ) => {
       const routeListSorted = Object.assign([], routeListExtendedFlat);
       routeListSorted.sort((left, right) => {
         const leftDistance = left.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
@@ -312,6 +332,25 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
           return -1;
         }
         if (leftDistance > rightDistance) {
+          return 1;
+        }
+        return 0;
+      });
+
+      routeListSorted.sort((left, right) => {
+        let leftMatchIndex = left.textLowerCased.indexOf(searchStringLowerCased);
+        if (leftMatchIndex < 0) {
+          leftMatchIndex = Infinity;
+        }
+        let rightMatchIndex = right.textLowerCased.indexOf(searchStringLowerCased);
+        if (rightMatchIndex < 0) {
+          rightMatchIndex = Infinity;
+        }
+
+        if (leftMatchIndex < rightMatchIndex) {
+          return -1;
+        }
+        if (leftMatchIndex > rightMatchIndex) {
           return 1;
         }
         return 0;
@@ -356,13 +395,11 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     this.isSearchInProgressBS$ = new BehaviorSubject<boolean>(this.searchStringC.value !== '');
     this._searchStringLowerCasedBS$ = new BehaviorSubject<string>(this.searchStringC.value.toLowerCase());
     this.searchStringC.valueChanges.pipe(
-      withLatestFrom(this.routeListExtendedBS$),
       distinctUntilChanged(),
       takeUntil(this._isComponentDestroyedS$),
-    ).subscribe(([searchString, routeList]) => {
+    ).subscribe(searchString => {
       this.isSearchInProgressBS$.next(searchString !== '');
       this._searchStringLowerCasedBS$.next(searchString.toLowerCase());
-      this._levenshteinComputingInProgressCountBS$.next(this._computeRouteListCount(routeList));
     });
   }
 }
