@@ -2,6 +2,13 @@ export function computeLevenshteinDistance(
   a: string,
   b: string,
 ): number {
+  if (a.length === 0) {
+    return b.length;
+  }
+  if (b.length === 0) {
+    return a.length;
+  }
+
   let shorterString: string;
   let longerString: string;
   if (a.length < b.length) {
