@@ -330,6 +330,7 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
 
   private _subscribeToSearchString() {
     this.isSearchInProgressBS$ = new BehaviorSubject<boolean>(this.searchStringC.value !== '');
+    this._searchStringLowerCasedBS$ = new BehaviorSubject<string>(this.searchStringC.value.toLowerCase());
     this.searchStringC.valueChanges.pipe(
       distinctUntilChanged(),
       takeUntil(this._isComponentDestroyedS$),
