@@ -10,4 +10,5 @@ export interface MainMenuExtended extends MainMenu {
   levenshteinDistanceToSearchStringAmortizedBS$: BehaviorSubject<number>;
   matchesSearchBS$: BehaviorSubject<boolean>;
   matchesUrlBS$: BehaviorSubject<boolean>;
+  textLowerCased: string;
 }

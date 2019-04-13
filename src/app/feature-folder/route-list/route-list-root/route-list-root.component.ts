@@ -31,6 +31,7 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
   private _levenshteingComputingInProgressCountBS$ = new BehaviorSubject<number>(0);
   private _levenshteinMismatchThreshold = 2;
   private _routeListExtendedFlatBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
+  private _searchStringLowerCasedBS$: BehaviorSubject<string>;
 
   constructor(
     private _router: Router,
@@ -160,6 +161,8 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
     parentRoute?: MainMenuExtended,
   ) {
+    route.textLowerCased = route.text.toLowerCase();
+
     this._extendRouteWithMatchesSearch(route, parentRoute);
     this._extendRouteWithMatchesUrl(route, parentRoute);
 
@@ -230,13 +233,13 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     parentRoute?: MainMenuExtended,
   ) {
     route.levenshteinDistanceToSearchStringAmortizedBS$ = new BehaviorSubject(
-      computeLevenshteinDistanceAmortized(route.text.toLowerCase(), this.searchStringC.value.toLowerCase()),
+      computeLevenshteinDistanceAmortized(route.textLowerCased, this._searchStringLowerCasedBS$.getValue()),
     );
-    this.searchStringC.valueChanges.pipe(
+    this._searchStringLowerCasedBS$.pipe(
       takeUntil(this._changeS$),
     ).subscribe(searchString => {
       route.levenshteinDistanceToSearchStringAmortizedBS$.next(
-        computeLevenshteinDistanceAmortized(route.text.toLowerCase(), searchString.toLowerCase())
+        computeLevenshteinDistanceAmortized(route.textLowerCased, searchString)
       );
     });
 
@@ -332,6 +335,7 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
       takeUntil(this._isComponentDestroyedS$),
     ).subscribe(searchString => {
       this.isSearchInProgressBS$.next(searchString !== '');
+      this._searchStringLowerCasedBS$.next(searchString.toLowerCase());
     });
   }
 }
