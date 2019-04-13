@@ -18,15 +18,16 @@
   panelWidth="auto"
 >
   <ng-container
-    *ngFor="let route of routeListExtendedFlatBS$ | async"
+    *ngFor="let route of routeListExtendedFlatSortedBS$ | async"
   >
     <mat-option
       (onSelectionChange)="selectOption($event, route)"
-      *ngIf="route.matchesSearchRegExpBS$ | async"
+      *ngIf="route.matchesSearchBS$ | async"
       [value]="route.text"
     >
       <mat-icon *ngIf="route.imageUrl">home</mat-icon>
       {{route.text}}
+      {{route.levenshteinDistanceToSearchStringAmortizedBS$ | async}}
     </mat-option>
   </ng-container>
 </mat-autocomplete>

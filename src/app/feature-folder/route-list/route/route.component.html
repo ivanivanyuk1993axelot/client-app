@@ -2,10 +2,10 @@
   (expandedChange)="onExpandedChange($event)"
   *ngIf="route.items; else itemComponent"
   [expanded]="isExpanded || (isSearchInProgressBS$ | async)"
-  [ngClass]="{ active: (route.matchesUrlBS$ | async) || (route.hasChildrenThatMatchUrlBS$ | async), hidden: !(route.matchesSearchRegExpBS$ | async) && !(route.hasChildrenThatMatchSearchRegExpBS$ | async) }"
+  [ngClass]="{ active: (route.matchesUrlBS$ | async) || (route.hasChildrenThatMatchUrlBS$ | async), hidden: !(route.matchesSearchBS$ | async) && !(route.hasChildrenThatMatchSearchBS$ | async) }"
 >
   <mat-expansion-panel-header
-    [ngClass]="{ hidden: !(route.matchesSearchRegExpBS$ | async) }"
+    [ngClass]="{ hidden: !((route.matchesSearchBS$ | async) || (route.hasChildrenThatMatchSearchBS$ | async)) }"
   >
     <mat-panel-title>
       <ng-container [ngTemplateOutlet]="itemComponent"></ng-container>
@@ -13,7 +13,7 @@
   </mat-expansion-panel-header>
   <app-route-list
     [isSearchInProgressBS$]="isSearchInProgressBS$"
-    [ngClass]="{ hidden: !(isExpanded || (isSearchInProgressBS$ | async)) || !(route.hasChildrenThatMatchSearchRegExpBS$ | async) }"
+    [ngClass]="{ hidden: !(isExpanded || (isSearchInProgressBS$ | async)) || !(route.hasChildrenThatMatchSearchBS$ | async) }"
     [routeList]="route.items"
   ></app-route-list>
 </mat-expansion-panel>
@@ -21,7 +21,7 @@
 <ng-template #itemComponent>
   <a
     *ngIf="route.action !== '#'; else itemTextComponent"
-    [ngClass]="{ active: route.matchesUrlBS$ | async, hidden: !(route.matchesSearchRegExpBS$ | async) }"
+    [ngClass]="{ active: route.matchesUrlBS$ | async, hidden: !(route.matchesSearchBS$ | async) }"
     [routerLink]="route.action"
     mat-list-item
   >

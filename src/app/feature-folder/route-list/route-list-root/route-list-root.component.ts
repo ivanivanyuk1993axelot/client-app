@@ -1,14 +1,14 @@
 import {Component, Input, OnChanges, OnDestroy} from '@angular/core';
 import {MainMenu} from '../../../service-folder/menu/main-menu';
-import {BehaviorSubject, Subject} from 'rxjs';
+import {BehaviorSubject, combineLatest, interval, Subject} from 'rxjs';
 import {MainMenuExtended} from './main-menu-extended';
 import {NavigationEnd, Router} from '@angular/router';
 import {distinctUntilChanged, filter, startWith, takeUntil} from 'rxjs/operators';
 import {BroadcastComponentDestroyed} from '../../../mixin-folder/broadcast-component-destroyed';
 import {applyMixins} from 'rxjs/internal-compatibility';
 import {FormControl} from '@angular/forms';
-import {escapeRegExp} from 'tslint/lib/utils';
 import {MatOptionSelectionChange} from '@angular/material';
+import {computeLevenshteinDistanceAmortized} from '../../../method-folder/compute-levenshtein-distance/compute-levenshtein-distance-amortized';
 
 @Component({
   selector: 'app-route-list-root',
@@ -20,46 +20,62 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
 
   public isSearchInProgressBS$: BehaviorSubject<boolean>;
   public routeListExtendedBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
-  public routeListExtendedFlatBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
+  public routeListExtendedFlatSortedBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
   public searchStringC = new FormControl('');
 
   _isComponentDestroyedS$ = new Subject<void>();
 
   private _changeS$ = new Subject<void>();
   private _currentUrlBS$: BehaviorSubject<string>;
-  private _searchRegExpBS$: BehaviorSubject<RegExp>;
+  private _isLevenshteinComputing: BehaviorSubject<boolean>;
+  private _levenshteingComputingInProgressCountBS$ = new BehaviorSubject<number>(0);
+  private _levenshteinMismatchThreshold = 2;
+  private _routeListExtendedFlatBS$ = new BehaviorSubject<Array<MainMenuExtended>>([]);
 
   constructor(
     private _router: Router,
   ) {
-    this._currentUrlBS$ = new BehaviorSubject<string>(_router.url);
-    _router.events.pipe(
-      filter(e => e instanceof NavigationEnd),
-      takeUntil(this._isComponentDestroyedS$),
-    ).subscribe(() => {
-      this._currentUrlBS$.next(_router.url);
-    });
+    this._subscribeToRouterEvents();
+    this._subscribeToSearchString();
+    this._subscribeToRouteListExtended();
 
-    this.isSearchInProgressBS$ = new BehaviorSubject<boolean>(this.searchStringC.value !== '');
-    this._searchRegExpBS$ = new BehaviorSubject<RegExp>((new RegExp(this.searchStringC.value)));
-    this.searchStringC.valueChanges.pipe(
-      distinctUntilChanged(),
-      takeUntil(this._isComponentDestroyedS$),
-    ).subscribe(searchString => {
-      this.isSearchInProgressBS$.next(searchString !== '');
+    interval(1000).subscribe(() => {
+      const routeListSorted = Object.assign([], this._routeListExtendedFlatBS$.getValue());
+      routeListSorted.sort((left, right) => {
+        const leftDistance = left.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
+        const rightDistance = right.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
+        if (leftDistance < rightDistance) {
+          return -1;
+        }
+        if (leftDistance > rightDistance) {
+          return 1;
+        }
+        return 0;
+      });
 
-      this._searchRegExpBS$.next(
-        new RegExp(escapeRegExp(searchString), 'i'),
-      );
+      this.routeListExtendedFlatSortedBS$.next(routeListSorted);
     });
-
-    this.routeListExtendedBS$.pipe(
-      takeUntil(this._isComponentDestroyedS$),
-    ).subscribe(routeListExtended => {
-      this.routeListExtendedFlatBS$.next(
-        this._computeRouteListFlat(routeListExtended),
-      );
-    });
+    // combineLatest(
+    //   this._routeListExtendedFlatBS$,
+    //   this.searchStringC.valueChanges,
+    // ).pipe(
+    //   takeUntil(this._isComponentDestroyedS$),
+    // ).subscribe(([routeListExtendedFlat, searchString]) => {
+    //   const routeListSorted = Object.assign([], routeListExtendedFlat);
+    //   routeListSorted.sort((left, right) => {
+    //     const leftDistance = left.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
+    //     const rightDistance = right.levenshteinDistanceToSearchStringAmortizedBS$.getValue();
+    //     if (leftDistance < rightDistance) {
+    //       return -1;
+    //     }
+    //     if (leftDistance > rightDistance) {
+    //       return 1;
+    //     }
+    //     return 0;
+    //   });
+    //
+    //   this.routeListExtendedFlatSortedBS$.next(routeListSorted);
+    // });
   }
 
   public ngOnChanges(): void {
@@ -144,11 +160,11 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
     parentRoute?: MainMenuExtended,
   ) {
-    this._extendRouteWithMatchesSearchRegExp(route, parentRoute);
+    this._extendRouteWithMatchesSearch(route, parentRoute);
     this._extendRouteWithMatchesUrl(route, parentRoute);
 
     if (route.items) {
-      this._extendRouteWithHasChildrenThatMatchSearchRegExp(route, parentRoute);
+      this._extendRouteWithHasChildrenThatMatchSearch(route, parentRoute);
       this._extendRouteWithHasChildrenThatMatchUrl(route, parentRoute);
 
       for (const childRoute of route.items) {
@@ -157,27 +173,27 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     }
   }
 
-  private _extendRouteWithHasChildrenThatMatchSearchRegExp(
+  private _extendRouteWithHasChildrenThatMatchSearch(
     route: MainMenuExtended,
     parentRoute?: MainMenuExtended,
   ) {
-    route.hasChildrenThatMatchSearchRegExpBS$ = new BehaviorSubject<boolean>(true);
-    route.countOfChildrenThatMatchSearchRegExpBS$ = new BehaviorSubject<number>(0);
-    route.countOfChildrenThatMatchSearchRegExpBS$.pipe(
+    route.hasChildrenThatMatchSearchBS$ = new BehaviorSubject<boolean>(true);
+    route.countOfChildrenThatMatchSearchBS$ = new BehaviorSubject<number>(0);
+    route.countOfChildrenThatMatchSearchBS$.pipe(
       takeUntil(this._changeS$),
-    ).subscribe(countOfChildrenThatMatchSearchRegExp => {
-      route.hasChildrenThatMatchSearchRegExpBS$.next(countOfChildrenThatMatchSearchRegExp > 0);
+    ).subscribe(countOfChildrenThatMatchSearch => {
+      route.hasChildrenThatMatchSearchBS$.next(countOfChildrenThatMatchSearch > 0);
     });
 
     if (parentRoute) {
-      route.hasChildrenThatMatchSearchRegExpBS$.pipe(
+      route.hasChildrenThatMatchSearchBS$.pipe(
         startWith(true),
         distinctUntilChanged(),
         takeUntil(this._changeS$),
-      ).subscribe(hasChildrenThatMatchSearchRegExp => {
-        const countOfChildrenThatMatchSearchRegExp = parentRoute.countOfChildrenThatMatchSearchRegExpBS$.getValue();
-        parentRoute.countOfChildrenThatMatchSearchRegExpBS$.next(
-          hasChildrenThatMatchSearchRegExp ? countOfChildrenThatMatchSearchRegExp + 1 : countOfChildrenThatMatchSearchRegExp - 1,
+      ).subscribe(hasChildrenThatMatchSearch => {
+        const countOfChildrenThatMatchSearch = parentRoute.countOfChildrenThatMatchSearchBS$.getValue();
+        parentRoute.countOfChildrenThatMatchSearchBS$.next(
+          hasChildrenThatMatchSearch ? countOfChildrenThatMatchSearch + 1 : countOfChildrenThatMatchSearch - 1,
         );
       });
     }
@@ -209,28 +225,50 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     }
   }
 
-  private _extendRouteWithMatchesSearchRegExp(
+  private _extendRouteWithMatchesSearch(
     route: MainMenuExtended,
     parentRoute?: MainMenuExtended,
   ) {
-    route.matchesSearchRegExpBS$ = new BehaviorSubject<boolean>(this._searchRegExpBS$.getValue().test(route.text));
-    this._searchRegExpBS$.pipe(
+    route.levenshteinDistanceToSearchStringAmortizedBS$ = new BehaviorSubject(
+      computeLevenshteinDistanceAmortized(route.text.toLowerCase(), this.searchStringC.value.toLowerCase()),
+    );
+    this.searchStringC.valueChanges.pipe(
       takeUntil(this._changeS$),
-    ).subscribe(searchRegExp => {
-      route.matchesSearchRegExpBS$.next(
-        searchRegExp.test(route.text) && (this.searchStringC.value === '' || this._hasRouteUrl(route))
+    ).subscribe(searchString => {
+      route.levenshteinDistanceToSearchStringAmortizedBS$.next(
+        computeLevenshteinDistanceAmortized(route.text.toLowerCase(), searchString.toLowerCase())
+      );
+    });
+
+    route.matchesSearchBS$ = new BehaviorSubject<boolean>(
+      (this._hasRouteUrl(route) || !this.isSearchInProgressBS$.getValue())
+      &&
+      route.levenshteinDistanceToSearchStringAmortizedBS$.getValue() < this._levenshteinMismatchThreshold
+    );
+    combineLatest(
+      this.isSearchInProgressBS$.pipe(
+        distinctUntilChanged(),
+      ),
+      route.levenshteinDistanceToSearchStringAmortizedBS$,
+    ).pipe(
+      takeUntil(this._changeS$),
+    ).subscribe(([isSearchInProgress, levenshteinDistanceToSearchStringAmortized]) => {
+      route.matchesSearchBS$.next(
+        (this._hasRouteUrl(route) || !isSearchInProgress)
+        &&
+        levenshteinDistanceToSearchStringAmortized < this._levenshteinMismatchThreshold
       );
     });
 
     if (parentRoute) {
-      route.matchesSearchRegExpBS$.pipe(
+      route.matchesSearchBS$.pipe(
         startWith(true),
         distinctUntilChanged(),
         takeUntil(this._changeS$),
       ).subscribe(matchesSearchRegExp => {
-        const countOfChildrenThatMatchSearchRegExp = parentRoute.countOfChildrenThatMatchSearchRegExpBS$.getValue();
-        parentRoute.countOfChildrenThatMatchSearchRegExpBS$.next(
-          matchesSearchRegExp ? countOfChildrenThatMatchSearchRegExp + 1 : countOfChildrenThatMatchSearchRegExp - 1,
+        const countOfChildrenThatMatchSearch = parentRoute.countOfChildrenThatMatchSearchBS$.getValue();
+        parentRoute.countOfChildrenThatMatchSearchBS$.next(
+          matchesSearchRegExp ? countOfChildrenThatMatchSearch + 1 : countOfChildrenThatMatchSearch - 1,
         );
       });
     }
@@ -265,6 +303,36 @@ export class RouteListRootComponent implements BroadcastComponentDestroyed, OnCh
     route: MainMenuExtended,
   ) {
     return route.action !== '#';
+  }
+
+  private _subscribeToRouterEvents() {
+    this._currentUrlBS$ = new BehaviorSubject<string>(this._router.url);
+    this._router.events.pipe(
+      filter(e => e instanceof NavigationEnd),
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe(() => {
+      this._currentUrlBS$.next(this._router.url);
+    });
+  }
+
+  private _subscribeToRouteListExtended() {
+    this.routeListExtendedBS$.pipe(
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe(routeListExtended => {
+      this._routeListExtendedFlatBS$.next(
+        this._computeRouteListFlat(routeListExtended),
+      );
+    });
+  }
+
+  private _subscribeToSearchString() {
+    this.isSearchInProgressBS$ = new BehaviorSubject<boolean>(this.searchStringC.value !== '');
+    this.searchStringC.valueChanges.pipe(
+      distinctUntilChanged(),
+      takeUntil(this._isComponentDestroyedS$),
+    ).subscribe(searchString => {
+      this.isSearchInProgressBS$.next(searchString !== '');
+    });
   }
 }
 
