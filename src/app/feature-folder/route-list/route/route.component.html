@@ -5,7 +5,7 @@
   [ngClass]="{ active: (route.matchesUrlBS$ | async) || (route.hasChildrenThatMatchUrlBS$ | async), hidden: !(route.matchesSearchBS$ | async) && !(route.hasChildrenThatMatchSearchBS$ | async) }"
 >
   <mat-expansion-panel-header
-    [ngClass]="{ hidden: !((route.matchesSearchBS$ | async) || (route.hasChildrenThatMatchSearchBS$ | async)) }"
+    [ngClass]="{ hidden: !(route.matchesSearchBS$ | async) && !(route.hasChildrenThatMatchSearchBS$ | async) }"
   >
     <mat-panel-title>
       <ng-container [ngTemplateOutlet]="itemComponent"></ng-container>
@@ -21,7 +21,7 @@
 <ng-template #itemComponent>
   <a
     *ngIf="route.action !== '#'; else itemTextComponent"
-    [ngClass]="{ active: route.matchesUrlBS$ | async, hidden: !(route.matchesSearchBS$ | async) }"
+    [ngClass]="{ active: route.matchesUrlBS$ | async, hidden: !(route.matchesSearchBS$ | async) && !(route.hasChildrenThatMatchSearchBS$ | async) }"
     [routerLink]="route.action"
     mat-list-item
   >
