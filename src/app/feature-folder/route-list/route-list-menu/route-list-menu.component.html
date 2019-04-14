@@ -5,7 +5,10 @@
     [matMenuTriggerFor]="menu"
     [ngClass]="{ active: route.hasChildrenThatMatchUrlBS$ | async }"
     mat-menu-item
-  >{{ route.text }}</button>
+  >
+    <mat-icon *ngIf="route.imageUrl">home</mat-icon>
+    {{ route.text }}
+  </button>
   <mat-menu
     #menu="matMenu"
   >
