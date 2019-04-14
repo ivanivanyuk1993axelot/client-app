@@ -32,10 +32,15 @@
 </mat-autocomplete>
 
 <div class="route-list-container">
-  <mat-nav-list>
+  <mat-nav-list [ngClass]="{ hidden: !(isSearchInProgressBS$ | async) }">
     <app-route-list
       [isSearchInProgressBS$]="isSearchInProgressBS$"
       [routeList]="routeListExtendedBS$ | async"
     ></app-route-list>
   </mat-nav-list>
+
+  <app-route-list-menu
+    [ngClass]="{ hidden: isSearchInProgressBS$ | async }"
+    [routeList]="routeListExtendedBS$ | async"
+  ></app-route-list-menu>
 </div>

@@ -1,0 +1,17 @@
+<ng-container
+  *ngFor="let route of routeList"
+>
+  <button
+    [matMenuTriggerFor]="menu"
+    [ngClass]="{ active: route.hasChildrenThatMatchUrlBS$ | async }"
+    mat-menu-item
+  >{{ route.text }}</button>
+  <mat-menu
+    #menu="matMenu"
+  >
+    <app-route-menu
+      *ngFor="let route of route.items"
+      [route]="route"
+    ></app-route-menu>
+  </mat-menu>
+</ng-container>
